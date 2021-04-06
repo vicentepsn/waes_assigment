@@ -17,8 +17,14 @@ namespace BinaryDiff.Controllers
             _diffService = diffService;
         }
 
+        /// <summary>
+        /// Stores a comparable object with the data of one side (left or right). Creates a New object if it does not
+        /// exists or override a information of a existing one.
+        /// </summary>
+        /// <param name="id">The Id of the comparable object</param>
+        /// <param name="dataSide">The side to store the data, left or right</param>
         [HttpPut("{id}/{dataSide}")]
-        public async Task<IActionResult> SetLeft([FromRoute] int id, DiffDataSide dataSide)
+        public async Task<IActionResult> Put([FromRoute] int id, DiffDataSide dataSide)
         {
             try
             {
@@ -37,26 +43,11 @@ namespace BinaryDiff.Controllers
             }
         }
 
-        [HttpPut("{id}/rightwww")]
-        public async Task<IActionResult> SetRight([FromRoute] int id)
-        {
-            try
-            {
-                string bodyContent;
-                using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
-                {
-                    bodyContent = await reader.ReadToEndAsync();
-                }
-
-                _diffService.SetData(id, bodyContent, DiffDataSide.Right);
-                return Ok();
-            }
-            catch (HttpResponseException ex)
-            {
-                return StatusCode(ex.Status, ex.Value);
-            }
-        }
-
+        /// <summary>
+        /// Compares both sides of a comparable object and return the detais of the comparison
+        /// </summary>
+        /// <param name="id">The Id of the comparable object</param>
+        /// <returns>Returns a DiffResult objetc containing the detais of the comparison</returns>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDiff([FromRoute] int id)
         {

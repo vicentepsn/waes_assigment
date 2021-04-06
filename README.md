@@ -25,3 +25,8 @@ In this case, the json string `{"key_123": "value_abc"}` will generate a enconde
 1. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/left`, informing the Id in the Uri and a Base64 Enconded string as a **RequestBody** parameter type with média type `application/json`.
 2. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/right`, informing the Id in the Uri and a Base64 Enconded string as a **RequestBody** parameter typewith média type `application/json`.
 3. Send a Http **GET** request to the endpoint `(server:port)/v1/diff/{id}`, informing the Id in the Uri.
+
+## Implementation details
+
+The storage is only in memory.
+The repository class ComparableEncodedDataRepositoryInMemory implements the contract IComparableEncodedDataRepository. Then, it can easilly be replaced by another storage implementation.
