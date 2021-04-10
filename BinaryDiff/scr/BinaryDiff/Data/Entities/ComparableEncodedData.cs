@@ -3,7 +3,7 @@
     public class ComparableEncodedData
     {
         public int Id { get; set; }
-        public string LeftEncodedData { get; set; }
-        public string RightEncodedData { get; set; }
+        public byte[] LeftData { get; set; }
+        public byte[] RightData { get; set; }
     }
 }

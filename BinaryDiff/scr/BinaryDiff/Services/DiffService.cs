@@ -5,8 +5,8 @@ using BinaryDiff.Services.Exceptions;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-using System.Text;
 
 namespace BinaryDiff.Services
 {
@@ -23,12 +23,12 @@ namespace BinaryDiff.Services
         /// Set one side of a comparable object
         /// </summary>
         /// <param name="id">The comparable object Id</param>
-        /// <param name="encodedData">The comparable object data of a side. Should be a Json Base64 Encoded</param>
+        /// <param name="encodedData">The comparable object data of a side. Should be a Base64 Encoded binary data</param>
         /// <param name="diffDataSide">The side that the data should be stored in the comparable object. Left or Right</param>
         public void SetData(int id, string encodedData, DiffDataSide diffDataSide)
         {
-            var decodedString = DecodeFromBase64String(encodedData);
-            ValidateJson(decodedString);
+            
+            var byteArray = DecodeFromBase64String(encodedData);
 
             var comparableObject = _comparableEncodedDataRepository.Get(id);
 
@@ -43,31 +43,28 @@ namespace BinaryDiff.Services
 
             if (diffDataSide == DiffDataSide.Left)
             {
-                comparableObject.LeftEncodedData = encodedData;
+                comparableObject.LeftData = byteArray;
             }
             else
             {
-                comparableObject.RightEncodedData = encodedData;
+                comparableObject.RightData = byteArray;
             }
 
             _comparableEncodedDataRepository.Update(comparableObject);
         }
 
         /// <summary>
-        /// Decode from a Base64 Encoded string
+        /// Get the binary byte array decoded from a Bese64 encoded string
         /// </summary>
-        /// <param name="base64EncodedString">The Base64 encoded string</param>
-        /// <returns>The decode result string</returns>
+        /// <param name="base64EncodedString">The suposed Base64 encoded binary data</param>
+        /// <returns>Returns the byte array resulted from the decode</returns>
         /// <exception cref="HttpResponseException">Thrown when the string received is not a valid Base64 
         /// Encoded string</exception>
-        private string DecodeFromBase64String(string base64EncodedString)
+        private byte[] DecodeFromBase64String(string base64EncodedString)
         {
             try
             {
-                var byteArray = Convert.FromBase64String(base64EncodedString);
-                var decodedString = Encoding.UTF8.GetString(byteArray);
-
-                return decodedString;
+                return Convert.FromBase64String(base64EncodedString);
             }
             catch
             {
@@ -106,23 +103,31 @@ namespace BinaryDiff.Services
             ValidateComparableObject(comparableObject, id);
 
             var diffResult = new DiffResult();
-            diffResult.Result =
-                (comparableObject.LeftEncodedData == comparableObject.RightEncodedData)
-                    ? DiffResultType.Equal
-                    : (comparableObject.LeftEncodedData.Length == comparableObject.RightEncodedData.Length)
-                        ? DiffResultType.EqualSize
-                        : DiffResultType.DifferentSize;
-            if (diffResult.Result == DiffResultType.EqualSize)
+
+            if (comparableObject.LeftData.Length != comparableObject.RightData.Length)
             {
-                diffResult.DiffDetails = GetDiffDetails(comparableObject);
+                diffResult.Result = DiffResultType.DifferentSize;
+            }
+            else
+            {
+                var diffDetails = GetDiffDetails(comparableObject);
+                if (!diffDetails.Any())
+                {
+                    diffResult.Result = DiffResultType.Equal;
+                }
+                else
+                {
+                    diffResult.Result = DiffResultType.EqualSize;
+                    diffResult.DiffDetails = diffDetails;
+                }
             }
 
             return diffResult;
         }
 
         /// <summary>
-        /// Get the list with the differences between both sides in the comparable object. Should be used only 
-        /// when the sides of the comparable object are different and with the same size
+        /// Get the list with the differences between the binary data of both sides in the comparable object. 
+        /// Should be used only when the sides of the comparable object are different and with the same size
         /// </summary>
         /// <param name="comparableObject">The object to be compared</param>
         /// <returns>A list with the initial positions and lengths where the sides are different</returns>
@@ -133,9 +138,12 @@ namespace BinaryDiff.Services
             var firstDifferentPosition = -1;
             var previousIsEqual = true;
 
-            for (var i = 0; i < comparableObject.LeftEncodedData.Length; i++)
+            var leftBinaryData = comparableObject.LeftData;
+            var rightBinaryData = comparableObject.RightData;
+
+            for (var i = 0; i < leftBinaryData.Length; i++)
             {
-                if (comparableObject.LeftEncodedData[i] != comparableObject.RightEncodedData[i])
+                if (leftBinaryData[i] != rightBinaryData[i])
                 {
                     if (previousIsEqual)
                     {
@@ -144,7 +152,7 @@ namespace BinaryDiff.Services
                     lastDifferentPosition = i;
                     previousIsEqual = false;
                 }
-                if (comparableObject.LeftEncodedData[i] == comparableObject.RightEncodedData[i])
+                if (leftBinaryData[i] == rightBinaryData[i])
                 {
                     if (!previousIsEqual)
                     {
@@ -184,11 +192,11 @@ namespace BinaryDiff.Services
             {
                 throw new HttpResponseException((int)HttpStatusCode.NotFound, $"Object with index '{id}' was not found");
             }
-            if (String.IsNullOrEmpty(comparableObject.LeftEncodedData))
+            if (!(comparableObject.LeftData?.Any() ?? false))
             {
                 throw new HttpResponseException((int)HttpStatusCode.NotFound, $"Object with index '{comparableObject.Id}' have no left data");
             }
-            if (String.IsNullOrEmpty(comparableObject.RightEncodedData))
+            if (!(comparableObject.RightData?.Any() ?? false))
             {
                 throw new HttpResponseException((int)HttpStatusCode.NotFound, $"Object with index '{comparableObject.Id}' have no right data");
             }

@@ -1,8 +1,7 @@
-﻿using BinaryDiff.Services;
+﻿using BinaryDiff.Model;
+using BinaryDiff.Services;
 using BinaryDiff.Services.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BinaryDiff.Controllers
@@ -23,18 +22,13 @@ namespace BinaryDiff.Controllers
         /// </summary>
         /// <param name="id">The Id of the comparable object</param>
         /// <param name="dataSide">The side to store the data, left or right</param>
+        /// <param name="diffPayload">Contein the data to be compared, a base64 encoded binary data</param>
         [HttpPut("{id}/{dataSide}")]
-        public async Task<IActionResult> Put([FromRoute] int id, DiffDataSide dataSide)
+        public async Task<IActionResult> Put([FromRoute] int id, [FromRoute] DiffDataSide dataSide, [FromBody] DiffPayload diffPayload)
         {
             try
             {
-                string bodyContent;
-                using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
-                {
-                    bodyContent = await reader.ReadToEndAsync();
-                }
-
-                _diffService.SetData(id, bodyContent, dataSide);
+                _diffService.SetData(id, diffPayload.EncodedBinaryData, dataSide);
                 return Ok();
             }
             catch (HttpResponseException ex)

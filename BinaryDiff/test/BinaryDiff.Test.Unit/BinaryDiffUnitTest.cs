@@ -4,10 +4,10 @@ using BinaryDiff.ServiceModel;
 using BinaryDiff.Services;
 using BinaryDiff.Services.Exceptions;
 using Moq;
-using System;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
+using System.Runtime.Serialization.Formatters.Binary;
 using Xunit;
 
 namespace BinaryDiff.Test.Unit
@@ -16,11 +16,54 @@ namespace BinaryDiff.Test.Unit
     {
         private readonly Mock<IComparableEncodedDataRepository> _repositoryMock;
         private readonly DiffService _diffService;
+        private readonly byte[] _baseBinaryData;
+        private readonly byte[] _sameSizeBinaryData;
+        private readonly byte[] _differentSizeBinaryData;
 
         public BinaryDiffUnitTest()
         {
             _repositoryMock = new Mock<IComparableEncodedDataRepository>();
             _diffService = new DiffService(_repositoryMock.Object);
+
+            var baseTestObject = new TestObject
+            {
+                Id = 1,
+                DoubleValue1 = 1.1,
+                DoubleValue2 = 2.2,
+                SomeText = "Some text"
+            };
+
+            var sameSizeTestObject = new TestObject
+            {
+                Id = 2,
+                DoubleValue1 = 1.2,
+                DoubleValue2 = 2.3,
+                SomeText = "Diff text"
+            };
+
+            var differentSizeTestObject = new TestObject
+            {
+                Id = 3,
+                DoubleValue1 = 1.2,
+                DoubleValue2 = 2.3,
+                SomeText = "Some different longer text"
+            };
+
+            _baseBinaryData = SerializeToByteArray(baseTestObject);
+            _sameSizeBinaryData = SerializeToByteArray(sameSizeTestObject);
+            _differentSizeBinaryData = SerializeToByteArray(differentSizeTestObject);
+        }
+
+        private static byte[] SerializeToByteArray<TData>(TData data)
+        {
+            using (var stream = new MemoryStream())
+            {
+                var formatter = new BinaryFormatter();
+                formatter.Serialize(stream, data);
+                stream.Flush();
+                stream.Position = 0;
+                return stream.ToArray();
+            }
         }
 
         [Fact]
@@ -30,8 +73,8 @@ namespace BinaryDiff.Test.Unit
             var content = new ComparableEncodedData()
             {
                 Id = 1,
-                LeftEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9",
-                RightEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9"
+                LeftData = _baseBinaryData,
+                RightData = _baseBinaryData
             };
             _repositoryMock
                 .Setup(m => m.Get(1))
@@ -51,8 +94,8 @@ namespace BinaryDiff.Test.Unit
             var content = new ComparableEncodedData()
             {
                 Id = 1,
-                LeftEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9",
-                RightEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyInZhbHVlX2FiYyJ9"
+                LeftData = _baseBinaryData,
+                RightData = _differentSizeBinaryData
             };
             _repositoryMock
                 .Setup(m => m.Get(1))
@@ -72,8 +115,8 @@ namespace BinaryDiff.Test.Unit
             var content = new ComparableEncodedData()
             {
                 Id = 1,
-                LeftEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9",
-                RightEncodedData = "eyJrZXlfNDU2IjogInZhbHVlX2JjZCJ9"
+                LeftData = _baseBinaryData,
+                RightData = _sameSizeBinaryData
             };
             _repositoryMock
                 .Setup(m => m.Get(1))
@@ -84,23 +127,15 @@ namespace BinaryDiff.Test.Unit
 
             // Assert
             Assert.Equal(DiffResultType.EqualSize, response.Result);
-            Assert.Equal(2, response.DiffDetails.Count());
-            Assert.Equal(8, response.DiffDetails.ElementAt(0).Offset);
-            Assert.Equal(4, response.DiffDetails.ElementAt(0).Length);
-            Assert.Equal(26, response.DiffDetails.ElementAt(1).Offset);
-            Assert.Equal(4, response.DiffDetails.ElementAt(1).Length);
-        }
-
-        [Fact]
-        public void BinaryDiff_fail_invalidJsonLeft()
-        {
-            // Arrange
-            var jsonLeft = "{key_123 value_abc{{";
-            var jsonB64Left = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonLeft));
-
-            // Act / Assert
-            var exception = Assert.Throws<HttpResponseException>(() => _diffService.SetData(1, jsonB64Left, DiffDataSide.Left));
-            Assert.Equal((int)HttpStatusCode.BadRequest, exception.Status);
+            Assert.Equal(4, response.DiffDetails.Count());
+            Assert.Equal(256, response.DiffDetails.ElementAt(0).Offset);
+            Assert.Equal(1, response.DiffDetails.ElementAt(0).Length);
+            Assert.Equal(260, response.DiffDetails.ElementAt(1).Offset);
+            Assert.Equal(7, response.DiffDetails.ElementAt(1).Length);
+            Assert.Equal(268, response.DiffDetails.ElementAt(2).Offset);
+            Assert.Equal(7, response.DiffDetails.ElementAt(2).Length);
+            Assert.Equal(282, response.DiffDetails.ElementAt(3).Offset);
+            Assert.Equal(4, response.DiffDetails.ElementAt(3).Length);
         }
 
         [Fact]
@@ -121,7 +156,7 @@ namespace BinaryDiff.Test.Unit
             var content = new ComparableEncodedData()
             {
                 Id = 1,
-                RightEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9"
+                RightData = _baseBinaryData
             };
             _repositoryMock
                 .Setup(m => m.Get(1))
@@ -139,7 +174,7 @@ namespace BinaryDiff.Test.Unit
             var content = new ComparableEncodedData()
             {
                 Id = 1,
-                LeftEncodedData = "eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9"
+                LeftData = _baseBinaryData
             };
             _repositoryMock
                 .Setup(m => m.Get(1))
