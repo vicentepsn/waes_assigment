@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using Xunit;
 
 namespace BinaryDiff.Test.Unit
@@ -137,6 +138,30 @@ namespace BinaryDiff.Test.Unit
             Assert.Equal(7, response.DiffDetails.ElementAt(2).Length);
             Assert.Equal(282, response.DiffDetails.ElementAt(3).Offset);
             Assert.Equal(4, response.DiffDetails.ElementAt(3).Length);
+        }
+
+        [Fact]
+        public void BinaryDiff_pass_equalSize_differenceInTheEnd()
+        {
+            // Arrange
+            var content = new ComparableEncodedData()
+            {
+                Id = 1,
+                LeftData = Encoding.ASCII.GetBytes("aaaaaaaa"),
+                RightData = Encoding.ASCII.GetBytes("aaaaaabb")
+            };
+            _repositoryMock
+                .Setup(m => m.Get(1))
+                .Returns(content);
+
+            // Act
+            var response = _diffService.GetDiff(1);
+
+            // Assert
+            Assert.Equal(DiffResultType.EqualSize, response.Result);
+            Assert.Single(response.DiffDetails);
+            Assert.Equal(6, response.DiffDetails.ElementAt(0).Offset);
+            Assert.Equal(2, response.DiffDetails.ElementAt(0).Length);
         }
 
         [Fact]
