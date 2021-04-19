@@ -1,12 +1,8 @@
 # WAES Technical Assignment
 
-The API objective is to receibe two base64 encoded jsons strings with a identifier through two endpoint and get the comparison details of the two strings through another endpoint.
+The API objective is to receive two base64 encoded binary pieces of data with a identifier in json format through two endpoints and get the comparison details of the two binaries through another endpoint.
 
 ## The Assignment
-
-The assignment says that the endpoints to put the information should accepts JSON base64 encoded binary data.
-The assumption is that the information should be the string resulting from a conversion from a json string to base64.
-In this case, the json string `{"key_123": "value_abc"}` will generate a enconded string like `eyJrZXlfMTIzIjogInZhbHVlX2FiYyJ9`
 
 ### The Assignment Detailed Requirements
 
@@ -22,9 +18,12 @@ In this case, the json string `{"key_123": "value_abc"}` will generate a enconde
 				
 ## Usage
 
-1. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/left`, informing the Id in the Uri and a Base64 Enconded string as a **RequestBody** parameter type with média type `application/json`.
-2. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/right`, informing the Id in the Uri and a Base64 Enconded string as a **RequestBody** parameter typewith média type `application/json`.
+1. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/left`, informing the Id in the Uri and a Base64 Encoded binary data as it payload according with example below with media type `application/json`.
+2. Send a Http **PUT** request to the endpoint `(server:port)/v1/diff/{id}/right`, informing the Id in the Uri and a Base64 Encoded binary data as it payload according with example below with media type `application/json`.
 3. Send a Http **GET** request to the endpoint `(server:port)/v1/diff/{id}`, informing the Id in the Uri.
+
+### Payload example for the endpoints to set left and set right:
+` { "EncodedBinaryData": "AAEAAAD/////AQAAAAAAAAAMAgAAAEdCaW5hcnlEaWZmQ2xpZW..." }`
 
 ## Implementation details
 

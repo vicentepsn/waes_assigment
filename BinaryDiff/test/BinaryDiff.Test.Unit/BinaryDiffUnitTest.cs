@@ -4,6 +4,7 @@ using BinaryDiff.ServiceModel;
 using BinaryDiff.Services;
 using BinaryDiff.Services.Exceptions;
 using Moq;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -139,11 +140,99 @@ namespace BinaryDiff.Test.Unit
         }
 
         [Fact]
+        public void BinaryDiff_pass_setDataLeft()
+        {
+            // Arrange
+            var id = 1;
+            var content = Convert.ToBase64String(_baseBinaryData);
+            ComparableEncodedData resultContent = null;
+            _repositoryMock
+                .Setup(m => m.Get(id))
+                .Returns(resultContent);
+
+            // Act
+            var result = _diffService.SetData(id, content, DiffDataSide.Left);
+
+            // Assert
+            Assert.Equal(id, result.Id);
+            Assert.True(result.LeftData.SequenceEqual(_baseBinaryData));
+        }
+
+        [Fact]
+        public void BinaryDiff_pass_setDataRight()
+        {
+            // Arrange
+            var id = 1;
+            var content = Convert.ToBase64String(_baseBinaryData);
+            ComparableEncodedData resultContent = null;
+            _repositoryMock
+                .Setup(m => m.Get(id))
+                .Returns(resultContent);
+
+            // Act
+            var result = _diffService.SetData(id, content, DiffDataSide.Right);
+
+            // Assert
+            Assert.Equal(id, result.Id);
+            Assert.True(result.RightData.SequenceEqual(_baseBinaryData));
+        }
+
+        [Fact]
+        public void BinaryDiff_pass_setDataLeft_existingObject()
+        {
+            // Arrange
+            var id = 1;
+            var content = Convert.ToBase64String(_baseBinaryData);
+            ComparableEncodedData resultContent = 
+                new ComparableEncodedData
+                {
+                    Id = id,
+                    RightData = _sameSizeBinaryData
+                };
+            _repositoryMock
+                .Setup(m => m.Get(id))
+                .Returns(resultContent);
+
+            // Act
+            var result = _diffService.SetData(id, content, DiffDataSide.Left);
+
+            // Assert
+            Assert.Equal(id, result.Id);
+            Assert.True(result.LeftData.SequenceEqual(_baseBinaryData));
+            Assert.True(result.RightData.SequenceEqual(_sameSizeBinaryData));
+        }
+
+        [Fact]
+        public void BinaryDiff_pass_setDataRight_existingObject()
+        {
+            // Arrange
+            var id = 1;
+            var content = Convert.ToBase64String(_baseBinaryData);
+            ComparableEncodedData resultContent =
+                new ComparableEncodedData
+                {
+                    Id = id,
+                    LeftData = _sameSizeBinaryData
+                };
+            _repositoryMock
+                .Setup(m => m.Get(id))
+                .Returns(resultContent);
+
+            // Act
+            var result = _diffService.SetData(id, content, DiffDataSide.Right);
+
+            // Assert
+            Assert.Equal(id, result.Id);
+            Assert.True(result.RightData.SequenceEqual(_baseBinaryData));
+            Assert.True(result.LeftData.SequenceEqual(_sameSizeBinaryData));
+        }
+
+        [Fact]
         public void BinaryDiff_fail_invalidBase64Encoding()
         {
             // Arrange
             var content = "kdfjasdfj$%#$¨@358t5469245%@";
-
+            
             // Act / Assert
             var exception = Assert.Throws<HttpResponseException>(() => _diffService.SetData(1, content, DiffDataSide.Left));
             Assert.Equal((int)HttpStatusCode.BadRequest, exception.Status);

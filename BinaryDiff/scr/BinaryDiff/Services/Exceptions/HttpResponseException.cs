@@ -2,6 +2,7 @@
 
 namespace BinaryDiff.Services.Exceptions
 {
+    [Serializable]
     public class HttpResponseException : Exception
     {
         public HttpResponseException(int status, object value)
@@ -10,7 +11,7 @@ namespace BinaryDiff.Services.Exceptions
             Value = value;
         }
 
-        public int Status { get; set; } = 500;
+        public int Status { get; set; }
 
         public object Value { get; set; }
     }

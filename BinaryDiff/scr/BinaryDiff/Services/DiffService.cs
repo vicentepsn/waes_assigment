@@ -25,7 +25,9 @@ namespace BinaryDiff.Services
         /// <param name="id">The comparable object Id</param>
         /// <param name="encodedData">The comparable object data of a side. Should be a Base64 Encoded binary data</param>
         /// <param name="diffDataSide">The side that the data should be stored in the comparable object. Left or Right</param>
-        public void SetData(int id, string encodedData, DiffDataSide diffDataSide)
+        /// <returns>Returns the resulted ComparableEncodedData object</returns>
+        /// <exception cref="HttpResponseException">Thrown when the 'encodedData' is not a valid Base64 Encoded string</exception>
+        public ComparableEncodedData SetData(int id, string encodedData, DiffDataSide diffDataSide)
         {
             
             var byteArray = DecodeFromBase64String(encodedData);
@@ -51,12 +53,14 @@ namespace BinaryDiff.Services
             }
 
             _comparableEncodedDataRepository.Update(comparableObject);
+
+            return comparableObject;
         }
 
         /// <summary>
         /// Get the binary byte array decoded from a Bese64 encoded string
         /// </summary>
-        /// <param name="base64EncodedString">The suposed Base64 encoded binary data</param>
+        /// <param name="base64EncodedString">The supposed Base64 encoded binary data</param>
         /// <returns>Returns the byte array resulted from the decode</returns>
         /// <exception cref="HttpResponseException">Thrown when the string received is not a valid Base64 
         /// Encoded string</exception>
@@ -73,27 +77,10 @@ namespace BinaryDiff.Services
         }
 
         /// <summary>
-        /// Validates if the string is a well formed valid json. It does not check any json schema
-        /// </summary>
-        /// <param name="jsonString">The supposed json string</param>
-        /// <exception cref="HttpResponseException">Thrown when the string received is not a valid json string</exception>
-        private void ValidateJson(string jsonString)
-        {
-            try
-            {
-                var result = JObject.Parse(jsonString);
-            }
-            catch
-            {
-                throw new HttpResponseException((int)HttpStatusCode.BadRequest, "Not a valid json string");
-            }
-        }
-
-        /// <summary>
-        /// Compares both sides of a comparable object and return the detais of the comparison
+        /// Compares both sides of a comparable object and return the details of the comparison
         /// </summary>
         /// <param name="id">The Id of the comparable object</param>
-        /// <returns>Returns a DiffResult objetc containing the detais of the comparison</returns>
+        /// <returns>Returns a DiffResult object containing the details of the comparison</returns>
         /// <exception cref="HttpResponseException">Thrown when there is no comparable object with the Id informed 
         /// or when the comparable object does not have data in one of its side (left/right)</exception>
         public DiffResult GetDiff(int id)
@@ -102,27 +89,23 @@ namespace BinaryDiff.Services
 
             ValidateComparableObject(comparableObject, id);
 
-            var diffResult = new DiffResult();
 
             if (comparableObject.LeftData.Length != comparableObject.RightData.Length)
             {
-                diffResult.Result = DiffResultType.DifferentSize;
-            }
-            else
-            {
-                var diffDetails = GetDiffDetails(comparableObject);
-                if (!diffDetails.Any())
-                {
-                    diffResult.Result = DiffResultType.Equal;
-                }
-                else
-                {
-                    diffResult.Result = DiffResultType.EqualSize;
-                    diffResult.DiffDetails = diffDetails;
-                }
+                return new DiffResult { Result = DiffResultType.DifferentSize };
             }
 
-            return diffResult;
+            var diffDetails = GetDiffDetails(comparableObject);
+            if (!diffDetails.Any())
+            {
+                return new DiffResult { Result = DiffResultType.Equal };
+            }
+
+            return new DiffResult 
+            {
+                Result = DiffResultType.EqualSize,
+                DiffDetails = diffDetails
+            };
         }
 
         /// <summary>
@@ -133,9 +116,9 @@ namespace BinaryDiff.Services
         /// <returns>A list with the initial positions and lengths where the sides are different</returns>
         private IEnumerable<DiffResultDetail> GetDiffDetails(ComparableEncodedData comparableObject)
         {
-            var diffResultetails = new List<DiffResultDetail>();
-            var lastDifferentPosition = -1;
-            var firstDifferentPosition = -1;
+            var diffResultDetails = new List<DiffResultDetail>();
+            var lastDifferentPosition = int.MinValue;
+            var firstDifferentPosition = int.MinValue;
             var previousIsEqual = true;
 
             var leftBinaryData = comparableObject.LeftData;
@@ -156,7 +139,7 @@ namespace BinaryDiff.Services
                 {
                     if (!previousIsEqual)
                     {
-                        diffResultetails.Add(
+                        diffResultDetails.Add(
                             new DiffResultDetail 
                             { 
                                 Offset = firstDifferentPosition, 
@@ -169,7 +152,7 @@ namespace BinaryDiff.Services
 
             if (!previousIsEqual)
             {
-                diffResultetails.Add(
+                diffResultDetails.Add(
                     new DiffResultDetail
                     {
                         Offset = firstDifferentPosition,
@@ -177,11 +160,11 @@ namespace BinaryDiff.Services
                     });
             }
 
-            return diffResultetails;
+            return diffResultDetails;
         }
 
         /// <summary>
-        /// Valdates if the comparable objetc exists and if it has both sides to compara
+        /// Validates if the comparable object exists and if it has both sides to compare
         /// </summary>
         /// <param name="comparableObject">The comparable object to be validated</param>
         /// <exception cref="HttpResponseException">Thrown when the comparable object is null

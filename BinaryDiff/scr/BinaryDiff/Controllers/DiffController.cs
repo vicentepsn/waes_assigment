@@ -22,9 +22,9 @@ namespace BinaryDiff.Controllers
         /// </summary>
         /// <param name="id">The Id of the comparable object</param>
         /// <param name="dataSide">The side to store the data, left or right</param>
-        /// <param name="diffPayload">Contein the data to be compared, a base64 encoded binary data</param>
+        /// <param name="diffPayload">Contain the data to be compared, a base64 encoded binary data</param>
         [HttpPut("{id}/{dataSide}")]
-        public async Task<IActionResult> Put([FromRoute] int id, [FromRoute] DiffDataSide dataSide, [FromBody] DiffPayload diffPayload)
+        public IActionResult Put([FromRoute] int id, [FromRoute] DiffDataSide dataSide, [FromBody] DiffPayload diffPayload)
         {
             try
             {
@@ -38,12 +38,12 @@ namespace BinaryDiff.Controllers
         }
 
         /// <summary>
-        /// Compares both sides of a comparable object and return the detais of the comparison
+        /// Compares both sides of a comparable object and return the details of the comparison
         /// </summary>
         /// <param name="id">The Id of the comparable object</param>
-        /// <returns>Returns a DiffResult objetc containing the detais of the comparison</returns>
+        /// <returns>Returns a DiffResult object containing the details of the comparison</returns>
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetDiff([FromRoute] int id)
+        public IActionResult GetDiff([FromRoute] int id)
         {
             try
             {
