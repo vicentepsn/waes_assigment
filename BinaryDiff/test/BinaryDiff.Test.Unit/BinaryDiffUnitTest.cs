@@ -165,6 +165,30 @@ namespace BinaryDiff.Test.Unit
         }
 
         [Fact]
+        public void BinaryDiff_pass_equalSize_differenceInTheBeginning()
+        {
+            // Arrange
+            var content = new ComparableEncodedData()
+            {
+                Id = 1,
+                LeftData = Encoding.ASCII.GetBytes("aaaaaaaa"),
+                RightData = Encoding.ASCII.GetBytes("bbaaaaaa")
+            };
+            _repositoryMock
+                .Setup(m => m.Get(1))
+                .Returns(content);
+
+            // Act
+            var response = _diffService.GetDiff(1);
+
+            // Assert
+            Assert.Equal(DiffResultType.EqualSize, response.Result);
+            Assert.Single(response.DiffDetails);
+            Assert.Equal(0, response.DiffDetails.ElementAt(0).Offset);
+            Assert.Equal(2, response.DiffDetails.ElementAt(0).Length);
+        }
+
+        [Fact]
         public void BinaryDiff_pass_setDataLeft()
         {
             // Arrange
